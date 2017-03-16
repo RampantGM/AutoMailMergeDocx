@@ -144,8 +144,8 @@ def manlfields():
 def create_new_letter(lttrtmplt,eagleacct):
 
     # establish DB connection to prod
-    dsn_prod = cx_Oracle.makedsn('dm12-scan', '1521', service_name='egl1prc_adhoc')
-    conn_prod = cx_Oracle.connect(user='mwitt', password='T3chn3t!um', dsn=dsn_prod)
+    dsn_prod = cx_Oracle.makedsn('<server>', '<port>', service_name='<service_name>')
+    conn_prod = cx_Oracle.connect(user='<username>', password='<password>', dsn=dsn_prod)
     curr_prod = conn_prod.cursor()
     df_sql = pd.read_sql(v_sql + eagleacct, conn_prod)
     global DBlist1,DBlist2,DBdict
