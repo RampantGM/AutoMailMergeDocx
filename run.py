@@ -16,7 +16,7 @@ SECRET_KEY = 'youll_never_guess'
 
 mypath = "/Users/mwitt/PycharmProjects/testform/app/lettertemplates"
 dt = datetime.datetime.now()
-now = str(dt.year)+str(dt.month)+str(dt.day)+str(dt.hour)+str(dt.minute)
+now = str(dt.year)+str(dt.month)+str(dt.day)+str(dt.hour)+str(dt.minute)+str(dt.second)
 #Form fields
 lettertemplate = ''
 eagleaccount = ''
@@ -27,7 +27,8 @@ Dvalues = []
 Dfields = []
 
 outpath = '/Users/mwitt/PycharmProjects/testform/app/outputletters/'
-letterout = '_MailMergeFile'+str(now)+'.docx'
+global letterout
+#letterout = '_MailMergeFile'+str(now)+'.docx'
 v_sql = """SELECT   a.account_id Account_Number
         ,A.ACCOUNT_BALANCE Balance_Amount
         ,OAI.ORIGINAL_CREDITOR_NAME Original_Creditor
@@ -99,15 +100,16 @@ def index():
                 return redirect(url_for('manlfields')) #YES - We have manual fields.
             else:
                 df = create_new_letter(lettertemplate,eagleaccount) #NO
-                print 'Dataframe is empty?'+str(df)
+                #print 'Dataframe is empty?'+str(df)
                 if df:
                     flash(Markup('No Eagle account information could be found! Please check Account ID.'))  # NO - Account id is not valid.
                     return redirect(url_for('index'))
                 else:
                     dt = datetime.datetime.now()
-                    now = str(dt.year) + str(dt.month) + str(dt.day) + str(dt.hour) + str(dt.minute)
+                    now = str(dt.year) + str(dt.month) + str(dt.day) + str(dt.hour) + str(dt.minute) + str(dt.second)
                     letterout = '_MailMergeFile' + str(now) + '.docx'
                     flash(Markup('Your file has been saved to: ' + outpath + eagleaccount + letterout))
+                    letterout = ''
                     return redirect(url_for('index'))
         else:
             flash(Markup('Bad Eagle Account ID')) #NO - Account id is not valid.
@@ -134,7 +136,11 @@ def manlfields():
 
         mandict = get_dic_from_two_lists(Dfields,Dvalues)
         create_new_letter(lettertemplate,eagleaccount)
+        dt = datetime.datetime.now()
+        now = str(dt.year) + str(dt.month) + str(dt.day) + str(dt.hour) + str(dt.minute) + str(dt.second)
+        letterout = '_MailMergeFile' + str(now) + '.docx'
         flash(Markup('Your file has been saved to: ' + outpath + eagleaccount + letterout))
+        letterout = ''
         return redirect(url_for('index'))
     else:
         print form.errors
@@ -184,6 +190,9 @@ def create_new_letter(lttrtmplt,eagleacct):
         # Combine keys with values and put into a dictionary
         # and send it to the docxmerge function with Letter
         # Template and Output file.
+        dt = datetime.datetime.now()
+        now = str(dt.year) + str(dt.month) + str(dt.day) + str(dt.hour) + str(dt.minute) + str(dt.second)
+        letterout = '_MailMergeFile' + str(now) + '.docx'
         DBdict = get_dic_from_two_lists(DBlist1, DBlist2)
         docxmerge(mypath + '/' + lttrtmplt, DBdict, outpath + eagleacct + letterout)
 
