@@ -1,0 +1,86 @@
+<html>
+  <head>
+<style>
+div.container {
+    width: 100%;
+    border: 1px solid red;
+}
+
+header, footer {
+    padding: 1em;
+    color: white;
+    background-color: gray;
+    clear: left;
+    text-align: center;
+}
+
+nav {
+    float: left;
+    max-width: 160px;
+    margin: 0;
+    padding: 1em;
+}
+
+nav ul {
+    list-style-type: none;
+    padding: 0;
+}
+   
+nav ul a {
+    text-decoration: none;
+}
+
+article {
+    margin-left: 170px;
+    border-left: 1px solid red;
+    padding: 1em;
+    overflow: hidden;
+}
+</style>
+
+ </head>
+  <body>
+<div class="container">
+   <img src="static/S2F-logo-scaled.png" align="left" hspace="10">
+<header>
+   <img></img>
+   <h1>MS Word MailMerge Letter Template Tool</h1>
+</header>
+  
+<nav>
+  <ul>
+    <li><a href=http://127.0.0.1:5000>Home</a></li>
+    <li><a href=http://127.0.0.1:5000/import>Import Accounts</a></li>
+    <li><a href="https://mw11cn01.squaretwofinancial.com/python/nest.py">Nest</a></li>
+  </ul>
+</nav>
+
+<article>
+  <h1>Choose a Letter Template and upload an Excel Spreadsheet</h1>
+<form method="post">
+    {{ form.hidden_tag() }}
+    {{ form.choiceex1.label }}<br>
+    {{ form.choiceex1 }}
+<p><input type=file name=excel><br>
+    <input type=submit value='Import XLSX'></p>
+
+</form>
+</article>
+
+<footer>Production Services</footer>
+
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <ul class=flashes>
+        {% for message in messages %}
+        <div class="alert alert-success" role="alert">
+        {{ message }}
+        </div>
+        {% endfor %}
+        </ul>
+        {% endif %}
+        {% endwith %}
+        {% block body %}{% endblock %}
+</div>
+  </body>
+</html>
