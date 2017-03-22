@@ -1,5 +1,5 @@
 # AutoMailMergeDocx
-Connect to a database to fill out MS Word Mailmerge Letter Templates. Can do a single account or upload a spreadsheet with account numbers.
+Connect to an Oracle database to fill out MS Word Mailmerge Letter Templates. Can do a single account or upload a spreadsheet with account numbers.
 Allows manual field population by identifying mergefields with a particular prefix.
 
 I created this project in order to take control of a good portion of the letter templates being used in our office.
