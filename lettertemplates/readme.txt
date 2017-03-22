@@ -1,1 +1,1 @@
-fd
+The letter template:  	Revised CA Law Dispute Letter 10282016 2.docx   shows an example of how I determined if there would be fields that need to be entered manually by the user. The other templates do not have manual fields.
