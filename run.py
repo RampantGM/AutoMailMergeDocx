@@ -1,5 +1,6 @@
-from flask import Flask, render_template, redirect, url_for, flash, Markup, Response, request
+from flask import Flask, render_template, redirect, url_for, flash, Markup, Response, request, session
 import os
+import pyexcel
 import json
 from docx_mailmerge import docxmerge
 from mailmerge import MailMerge
@@ -10,15 +11,17 @@ import numpy as np
 import cx_Oracle
 import pandas as pd
 import datetime
+import tkFileDialog
 
 
-SECRET_KEY = 'youll_never_guess'
-
+SECRET_KEY = 'my_f1rst_real_app_20170317'
+base_dir = "/Users/mwitt/PycharmProjects/testform/app/excelfiles/"
 mypath = "/Users/mwitt/PycharmProjects/testform/app/lettertemplates"
 dt = datetime.datetime.now()
 now = str(dt.year)+str(dt.month)+str(dt.day)+str(dt.hour)+str(dt.minute)+str(dt.second)
 #Form fields
 lettertemplate = ''
+lettertemplate1 = ''
 eagleaccount = ''
 dict2 = ()
 list2=[]
@@ -83,6 +86,15 @@ class SimpleForm(Form):
         choicesex.append((mychoice))
     choiceex = SelectField(u'Letter Templates', choices=choicesex)
 
+class ImportXL(Form):
+    choicesex1 = []
+    mychoice1 = ()
+    files = sorted([f for f in os.listdir(mypath) if not f.startswith('.')], key=lambda f: f.lower())
+    for file in files:
+        mychoice1 = (file, file)
+        choicesex1.append((mychoice1))
+    choiceex1 = SelectField(u'Letter Templates', choices=choicesex1)
+
 @app.route('/', methods=['post', 'get'])
 def index():
     form = SimpleForm()
@@ -93,7 +105,7 @@ def index():
         eagleaccount = form.accountid.data
 
         if len(eagleaccount)== 12: #Do we have a good account number?
-            allfields = do_my_work(lettertemplate,eagleaccount) #YES
+            allfields = do_my_work(lettertemplate) #YES
             #Check for manual fields.
             list1 = get_manual_fields(allfields)
             if len(list1) > 0: #Do we have manual fields?
@@ -126,7 +138,7 @@ def manlfields():
         global Dvalues, Dfields, mandict
 
         for i in form.addresses:
-            #Dvalues.append(chr(34) + str(i.data['Additional_Info']) + chr(34))
+            #Dvalues.append(i.partition('(')[-1].rpartition(')')[0])
             Dvalues.append(str(i.data['Additional_Info']))
 
         for key in form.addresses.object_data:
@@ -146,6 +158,68 @@ def manlfields():
         print form.errors
         return render_template('manflds.html', form=form)
 
+@app.route('/import', methods=['POST', 'GET'])
+def importexcel():
+    form = ImportXL()
+    if request.method == 'POST' and 'excel' in request.form:
+        global massdict, excelfile,lettertemplate,allfields,list1
+        excelfile = request.form['excel']
+        lettertemplate = form.choiceex1.data
+        allfields = do_my_work(lettertemplate) #YES
+        #Check for manual fields.
+        list1 = get_manual_fields(allfields)
+        if len(list1) > 0: #Do we have manual fields?
+            print list1
+#            for a in massdict:
+#                print a
+            session['excelfile'] = excelfile
+            session['lettertemplate'] = lettertemplate
+
+            return redirect(url_for('massmanlfields', excelfile=excelfile, lettertemplate=lettertemplate)) #YES - We have manual fields.
+        else:
+            accts = readxlsxfile(base_dir, excelfile)
+            for acctno in accts:
+                if isinstance(acctno, (int, long)):
+                    create_new_letter(lettertemplate, acctno)
+            flash(Markup('Your files have been saved to: ' + outpath))
+            return redirect(url_for('index'))
+    else:
+        print form.errors
+        return render_template('import.html', form=form)
+
+
+
+@app.route('/massmanlfields', methods=['post', 'get'])
+def massmanlfields():
+    form = AddressesForm(addresses=list2)
+    global xlfilen,ltrtemp#,mrgflds
+    xlfilen = session['excelfile']
+    ltrtemp = session['lettertemplate']
+    #mrgflds = allfields
+
+    if form.validate_on_submit():
+        global Dvalues, Dfields, massdict, accts, acctno
+
+        for i in form.addresses:
+            # Dvalues.append(i.partition('(')[-1].rpartition(')')[0])
+            Dvalues.append(str(i.data['Additional_Info']))
+
+        for key in form.addresses.object_data:
+            Df = key.keys()
+            Df = json.dumps(Df).strip('[]"')
+            Dfields.append(Df)
+
+        massdict = get_dic_from_two_lists(Dfields, Dvalues)
+        accts = readxlsxfile(base_dir, xlfilen)
+        for acctno in accts:
+            if isinstance( acctno, (int, long) ):
+                create_new_letter(ltrtemp,acctno)
+        flash(Markup('Your files have been saved to: ' + outpath))
+        return redirect(url_for('index'))
+    else:
+        print form.errors
+        return render_template('manflds.html', form=form)
+
 #Create the new letter.
 def create_new_letter(lttrtmplt,eagleacct):
 
@@ -153,7 +227,7 @@ def create_new_letter(lttrtmplt,eagleacct):
     dsn_prod = cx_Oracle.makedsn('<server>', '<port>', service_name='<service_name>')
     conn_prod = cx_Oracle.connect(user='<username>', password='<password>', dsn=dsn_prod)
     curr_prod = conn_prod.cursor()
-    df_sql = pd.read_sql(v_sql + eagleacct, conn_prod)
+    df_sql = pd.read_sql(v_sql + str(eagleacct), conn_prod)
     global DBlist1,DBlist2,DBdict
     DBlist1 = []
     DBlist2 = []
@@ -194,10 +268,10 @@ def create_new_letter(lttrtmplt,eagleacct):
         now = str(dt.year) + str(dt.month) + str(dt.day) + str(dt.hour) + str(dt.minute) + str(dt.second)
         letterout = '_MailMergeFile' + str(now) + '.docx'
         DBdict = get_dic_from_two_lists(DBlist1, DBlist2)
-        docxmerge(mypath + '/' + lttrtmplt, DBdict, outpath + eagleacct + letterout)
+        docxmerge(mypath + '/' + lttrtmplt, DBdict, outpath + str(eagleacct) + letterout)
 
 #Get all the mailmerge fields in a chosen mailmerge letter template docx.
-def do_my_work(lettertemplatefile,eagleacctid):
+def do_my_work(lettertemplatefile):
     document = MailMerge(mypath+'/'+lettertemplatefile)
     dbmf = get_mergefields(document)
     return dbmf
@@ -222,6 +296,18 @@ def get_mergefields(doc):
 # Combine two lists into dictionary with keys and values
 def get_dic_from_two_lists(keys, values):
     return {keys[i]: values[i] for i in range(len(keys))}
+
+def readxlsxfile(base_dir,filename):
+    spreadsheet = pyexcel.get_sheet(file_name=os.path.join(base_dir, filename))
+    global accntno
+    accntno = []
+    # row_range() gives [0 .. number of rows]
+    for r in spreadsheet.row_range():
+        # column_range() gives [0 .. number of ranges]
+        for c in spreadsheet.column_range():
+            accntno.append(spreadsheet.cell_value(r, c))
+
+    return accntno
 
 if __name__ == '__main__':
    app.run(debug = True)
